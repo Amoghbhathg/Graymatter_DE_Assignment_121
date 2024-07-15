@@ -1,0 +1,72 @@
+Create Schema gme
+
+Create table gme.usertbl(
+ id INT Not NULL,
+ name VARCHAR
+
+)
+
+Select * from gme.usertbl
+
+Create table gme.mytable(
+id INT NOT NULL,
+name VARCHAR(20)
+)
+
+Insert into gme.mytable values(1,'abc')
+Insert into gme.mytable values(2,'def')
+
+
+Select * from Person.EmailAddress
+
+Select EmailAddress from Person.Person INNER JOIN Person.EmailAddress ON Person.BusinessEntityID = EmailAddress.BusinessEntityID where EmailAddress.BusinessEntityID < 10
+
+Select Person.Address.AddressLine1,Person.Address.AddressLine2,Person.Address.City ,Person.StateProvince.Name from Person.CountryRegion INNER JOIN Person.StateProvince ON CountryRegion.CountryRegionCode = StateProvince.CountryRegionCode  INNER JOIN Person.Address ON StateProvince.StateProvinceID = Address.StateProvinceID  where CountryRegion.Name = 'Australia'
+
+
+Select * from Person.PhoneNumberType
+
+Select * from Person.CountryRegion
+
+Select * from Person.StateProvince
+
+Select * from Person.Address
+
+Create procedure sp_gme
+as
+Select * from Person.CountryRegion
+go
+
+exec sp_gme
+
+Create view myview As Select * from Person.Address 
+Select * from myview
+
+Create table #mytable
+(
+   id INT NOT NULL,
+   name VARCHAR(20)
+)
+
+Insert into #mytable
+Select * from Person.Address
+
+with Adv_cte as()
+
+Create table #mytbl(id INT,name VARCHAR(20))
+
+Create table mytble(id INT,name VARCHAR(20))
+
+Insert into mytble values (1,'abc')
+Insert into mytble values (2,'def')
+
+Select * from mytble
+
+Insert into #mytbl
+Select * from mytble
+
+Select * from #mytbl
+
+with gme_cte as(
+Select * from mytble)
+Select * from gme_cte
