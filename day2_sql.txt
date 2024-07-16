@@ -1,0 +1,341 @@
+-----Day 2 SQL ----
+
+------Triggers
+
+Create Table dbo.InsertLog(
+LogID INT Identity(1,1) Primary key,
+InsertedDate DateTime,
+InsertedBy NVARCHAR(100)
+);
+GO
+
+Create Table dbo.InsUpdDelLog(
+LogID INT Identity(1,1) Primary Key,
+InsertedDate DateTime,
+InsertedBy NVARCHAR(100),
+UpdatedDate DateTime,
+UpdatedBy NVARCHAR(100),
+DeletedDate DateTime,
+DeletedBy NVARCHAR(100)
+);
+Go
+
+Create Table dbo.InInsUpdDelLog(
+LogID INT Identity(1,1) Primary Key,
+InsertedDate DateTime,
+InsertedBy NVARCHAR(100),
+UpdatedDate DateTime,
+UpdatedBy NVARCHAR(100),
+DeletedDate DateTime,
+DeletedBy NVARCHAR(100)
+);
+Go
+
+Select * from InInsUpdDelLog
+
+
+
+Create Trigger trg_AfterIns
+ON Sales.Customer
+After Insert
+As 
+Begin
+	--Insert log entry when a new customer is inserted
+	Insert into dbo.InsUpdDelLog(InsertedDate,InsertedBy)
+	Values(GetDate(),SUSER_NAME());
+END;
+Go
+
+Create Trigger trg_AfterUpd
+ON Sales.Customer
+After Update
+As 
+Begin
+	--Insert log entry when a new customer is inserted
+	Insert into dbo.InsUpdDelLog(UpdatedDate,UpdatedBy)
+	Values(GetDate(),SUSER_NAME());
+END;
+Go
+
+Create Trigger trg_AfterDel
+ON Sales.Customer
+After Delete
+As 
+Begin
+	--Insert log entry when a new customer is inserted
+	Insert into dbo.InsUpdDelLog(DeletedDate,DeletedBy)
+	Values(GetDate(),SUSER_NAME());
+END;
+Go
+
+Drop trigger trg_AfterInsert
+
+Select * from Sales.Customer
+
+Insert into Sales.Customer (PersonID,StoreID,TerritoryID,rowguid,ModifiedDate) 
+values (1989,NULL,NULL,'E50D76BC-E3F7-459F-A6D2-20061538FCED',GetDate())
+
+Update Sales.Customer Set ModifiedDate = GETDATE() where PersonID = 1994
+
+Delete From Sales.Customer where PersonID = 1992
+
+
+----- Triggers(inserted,deleted,instead of inserted)-----------
+
+Create Table InsertLog1(
+PersonId INT
+)
+
+Create Table InsertLog2(
+PersonID INT
+)
+
+create trigger trg_afterInsert16
+on Sales.Customer
+after insert
+as
+begin
+	insert into Insertlog1(personId)
+	select personId from inserted
+end;
+go
+
+
+create trigger trg_afterDeleted12
+on Sales.Customer
+after delete
+as
+begin
+	insert into Insertlog1(personId)
+	select personId from deleted
+end;
+go
+
+insert into Sales.Customer (PersonID) values (18)
+Delete from Sales.Customer where PersonID = 18
+
+
+Select * from  InsertLog1
+
+Create Trigger trg_InsteadOfInsert
+ON Sales.Customer
+Instead Of Insert
+As
+Begin
+	--Insert the new customer into Customer Audit Table with Audit information
+	Insert Into dbo.InInsUpdDelLog(PersonID,StoreID,TerritoryID,AccountNumber,rowguid,ModifiedDate,InsertedDate,InsertedBy)
+	Select
+		i.PersonID,i.StoreID,i.TerritoryID,i.AccountNumber,i.rowguid,i.ModifiedDate,GetDate(),SUSER_NAME()
+	from inserted i
+END;
+Go
+
+Create Trigger trg_InsteadOfInsert
+ON Sales.Customer
+Instead Of Insert 
+As
+Begin
+	Insert into InsertLog2(PersonID)
+	Select i.PersonID from inserted i
+END;
+GO
+
+Insert into Sales.Customer (PersonId) values(107)
+Select * from Sales.Customer where PersonID = 107
+select * from InsertLog2
+
+
+
+-----Creating Scalar function
+
+Create Table Production.Products(
+ProductID INT NOT NULL,
+Name VARCHAR(20),
+UnitPrice INT,
+Quantity INT
+)
+
+Insert into Production.Products Values (1,'abc',400,4)
+Insert into Production.Products Values (2,'abc',200,6)
+Insert into Production.Products Values (3,'abc',500,2)
+Insert into Production.Products Values (4,'abc',300,5)
+
+Select * from Production.Products
+
+
+Create Function CalculateTotalPrice(@UnitPrice DECIMAL(10,2),@Quantity INT)
+Returns Decimal(10,2)
+As
+BEGIN
+	DECLARE @TotalPrice DECIMAL(10,2);
+	SET @TotalPrice = @UnitPrice * @Quantity;
+	Return @TotalPrice;
+END;
+
+Select ProductID,UnitPrice,Quantity,dbo.CalculateTotalPrice(UnitPrice,Quantity) As TotalPrice From Production.Products
+
+
+------Creating Table Valued function -------
+
+Create Table Customers(
+CustomerID INT,
+CustomerName VARCHAR(20),
+City VARCHAR(20)
+)
+
+Insert into Customers Values(1,'abc','Bengaluru')
+Insert into Customers Values(1,'def','Shivamogga')
+Insert into Customers Values(1,'sjs','Tumkur')
+Insert into Customers Values(1,'jds','Bengaluru')
+
+Create Function GetCustomerByCity(@City NVARCHAR(100))
+Returns Table
+As
+Return(
+	Select CustomerID,CustomerName,City From Customers where City = @City
+	);
+
+Select * from dbo.GetCustomerByCity('Bengaluru');
+
+
+-------- ACID Properties------------
+
+-- Start a transaction
+BEGIN TRANSACTION
+
+DECLARE @FromWareHouseID INT = 1;
+DECLARE @ToWareHouseID INT = 2;
+DECLARE @ProductID INT = 1;
+DECLARE @QuantityToTransfer INT = 10;
+
+Update Production.ProductInventory 
+Set Quantity = Quantity - @QuantityToTransfer
+where ProductID = @ProductID AND LocationID = @FromWareHouseID;
+
+Insert into Production.ProductInventory (ProductID,LocationID,Shelf,Bin,Quantity)
+Values (@ProductID,@ToWareHouseID,'A','1',@QuantityToTransfer);
+
+-- Commit the transaction if everything is successfull
+COMMIT TRANSACTION
+PRINT 'Inventory transfer completed successfully.';
+
+Select * from Production.ProductInventory
+
+
+create table dbo.SalesOrderChangeLogg(
+changeID int identity(1,1) primary key,
+SalesOrderID int,
+OldTotalDue money,
+NewTotalDue money,
+ChangeDate datetime
+)
+
+
+
+----Create Stored Procedure
+Create Procedure CalculateAndUpdateCustomerSales3
+	@CustomerID INT,
+	@SalesOrderID INT,
+	@NewTotalDue MONEY
+As
+BEGIN
+	--Begin Transaction
+	BEGIN Transaction 
+
+DECLARE @name INT;
+--DECLARE @CustomerID INT = 14324;
+--DECLARE @SalesOrderID INT = 43692;
+--DECLARE @SalesOrderID1 INT = 43659;
+
+with Cust_sales as(
+Select sum(h.TotalDue) as cash,c.CustomerID from Sales.Customer c 
+	inner join Sales.SalesOrderHeader h  on c.CustomerID = h.CustomerID
+	group by c.CustomerID
+	having c.CustomerID=@CustomerID)
+
+Select @name = cash  from Cust_sales
+print @name
+
+Create Table #TempTbl3(
+SalesOrderID INT,
+OrderDate DateTime,
+TotalDue Money
+)
+
+
+
+
+Insert into #TempTbl3 Select SalesOrderID,OrderDate,TotalDue from Sales.SalesOrderHeader where SalesOrderID=@SalesOrderID
+Select * from #TempTbl3
+
+
+Update Sales.SalesOrderHeader Set TaxAmt = 10000 where SalesOrderID = @SalesOrderID
+Select * from Sales.SalesOrderHeader where SalesOrderID = @SalesOrderID
+
+
+
+
+commit transaction
+end
+go
+
+Create Trigger trg_AfterUpdateSalesOrderHeader
+On Sales.SalesOrderHeader
+After Update
+As
+BEGIN
+	--Declare variables to store old and new values
+	DECLARE @SalesOrderID INT,@OldTaxamt MONEY,@NewTaxamt Money;
+
+	--Select the old and new values
+	Select 
+		@SalesOrderID = i.SalesOrderID,
+		@OldTaxamt = d.TaxAmt,
+		@NewTaxamt = i.TaxAmt
+	From
+		inserted i
+		Inner Join deleted d On i.SalesOrderID = d.SalesOrderID;
+insert into dbo.SalesOrderChangeLogg(SalesOrderID,OldTotalDue,NewTotalDue,ChangeDate) values (@SalesOrderID,@OldTaxamt,@NewTaxamt,getdate())
+end
+update [Sales].[SalesOrderHeader]
+set TaxAmt=500.263 where SalesOrderID = 74080
+--select * from dbo.SalesOrderChangeLogg
+--Select * from Sales.SalesOrderHeader
+
+
+
+Select * from CalculateAndUpdateCustomerSales
+
+exec CalculateAndUpdateCustomerSales3 @CustomerID =29825 ,
+	@SalesOrderID  = 43659,
+	@NewTotalDue = 10000
+
+
+
+Select * from Production.ProductInventory
+Select * from sales.SalesOrderDetail
+Select * from sales.SalesOrderHeader
+
+
+
+select sum(D.OrderQty) as quantity ,D.ProductID 
+into #Temptable
+from
+sales.SalesOrderHeader H inner join sales.SalesOrderDetail D on H.SalesOrderID=D.SalesOrderID
+where H.OrderDate between '2011-05-31 00:00:00.000' and '2011-07-01 00:00:00.000'
+group by D.ProductID
+
+Select * from #Temptable
+
+with gme_cte1 as(
+Select sum(D.OrderQty) as quantity ,D.ProductID from
+sales.SalesOrderHeader H inner join sales.SalesOrderDetail D on H.SalesOrderID=D.SalesOrderID
+where H.OrderDate between '2011-05-31 00:00:00.000' and '2011-07-01 00:00:00.000'
+group by D.ProductID)
+
+Update Production.ProductInventory Set Quantity = ct.quantity from gme_cte1 ct
+
+
+
+
+
