@@ -1,0 +1,124 @@
+------ Day 3------------
+
+------SCD Types-------------
+
+Create Table Customer(
+CustID INT NOT NULL,
+Address VARCHAR(50),
+NewDate DateTime,
+OldDate DateTime
+)
+
+Insert into Customer values(1,'Bengaluru',getDate(),NULL)
+Insert into Customer values(2,'Chennai',getDate(),NULL)
+Insert into Customer values(3,'Mumbai',getDate(),NULL)
+Insert into Customer values(4,'Bengaluru',getDate(),NULL)
+
+Select * from Customer
+
+-------- SCD Type 1---------------
+
+Update Customer set Address = 'Hyderbad' where CustID = 4
+
+
+--------SCD Type 2-----------------
+
+Update Customer Set  OldDate= getDate(), NewDate=NULL where CustID = 2
+Insert into Customer values (2,'Kolkata',getDate(),NULL)
+
+--------SCD Type 3-------
+
+Create Table Customer1(
+CustID INT NOT NULL,
+Address VARCHAR(50),
+NewDate DateTime,
+OldDate DateTime
+)
+
+Insert into Customer1 values(1,'Bengaluru',getDate(),NULL)
+Insert into Customer1 values(2,'Chennai',getDate(),NULL)
+Insert into Customer1 values(3,'Mumbai',getDate(),NULL)
+Insert into Customer1 values(4,'Bengaluru',getDate(),NULL)
+
+Select * from Customer1
+
+Alter Table Customer1 Add PrevAddress VARCHAR(50)
+Update Customer1 Set PrevAddress = Address, Address = 'Hyderbad' where CustID = 3
+
+
+------------------CDC----------------
+
+EXEC sys.sp_cdc_enable_db
+
+EXEC sys.sp_cdc_enable_table
+	@source_schema = N'dbo',
+	@source_name = N'Customer',
+	@role_name = NULL;
+
+Select * from cdc.captured_columns
+Select * from cdc.dbo_Customer_CT
+
+
+------------------Casting----------------
+Select * from Sales.SalesOrderHeader
+
+Select SalesorderID,CAST(OrderDate As Date) from Sales.SalesOrderHeader
+
+----------------Regular Expression---------------
+
+Select * from Person.EmailAddress
+
+
+
+-----------------Merging--------
+Select * from Customer
+
+Create Table Customer2(
+CustID INT NOT NULL Primary Key,
+Address VARCHAR(50),
+NewDate DateTime,
+OldDate DateTime
+)
+
+Update Customer2 Set Address = 'Hyderbad' where CustID=3
+
+
+Insert into Customer2 values(1,'Bengaluru',getDate(),NULL)
+Insert into Customer2 values(2,'Chennai',getDate(),NULL)
+Insert into Customer2 values(3,'Mumbai',getDate(),NULL)
+Insert into Customer2 values(4,'Bengaluru',getDate(),NULL)
+
+Select * from Customer2
+
+Create Table #Cust(
+CustID INT NOT NULL Primary Key,
+Address VARCHAR(50),
+NewDate DateTime,
+OldDate DateTime
+)
+
+Insert into #Cust values(1,'Bengaluru',getDate(),NULL)
+Insert into #Cust values(2,'Chennai',getDate(),NULL)
+Insert into #Cust values(3,'Hyderbad',getDate(),NULL)
+Insert into #Cust values(9,'Chennai',getDate(),NULL)
+
+Select * from #Cust
+
+
+Merge Customer2 As target
+USING #Cust As source
+ON (target.CustID =source.CustID AND target.OldDate IS NULL)
+When Matched And target.Address <>source.Address
+	Then Update Set OldDate = getDate(),Address = source.Address
+When Not Matched By Target
+	Then Insert(CustID,Address,NewDate,OldDate) values (source.CustID,source.Address,source.NewDate,source.OldDate);
+
+-----------------Full Load Soft Delete----------
+Update Sales.Customer
+Set OldDate = getdate(),IsCurrent = 0,IsDeleted = 1
+where CustID IN(Select CustID from Sales.Customer where IsCurrent = 1) And CustID Not IN (Select CustID from #CustTemp);
+
+---------------Incremental Load Soft Delete----------------
+Update Sales.Customer
+Set OldDate = getdate(),IsCurrent = 0,IsDeleted = 1
+where CustID IN(Select CustID from Sales.Customer where IsCurrent = 1) And CustID In (Select CustID from #CustTemp where IsDeleted = 1);
