@@ -1,0 +1,213 @@
+---------------Day 5 Assignment----------
+
+-------1st Question-------
+Select Name,ProductNumber,ListPrice from Production.Product
+
+Select Top 10 Name,ProductNumber,ListPrice from Production.Product Order By ListPrice DESC
+
+SELECT a.CustomerID,b.FirstName,b.LastName,COUNT(c.SalesOrderID) AS TotalOrders
+FROM 
+Sales.Customer AS a JOIN Person.Person AS b ON a.PersonID = b.BusinessEntityID JOIN 
+Sales.SalesOrderHeader AS c ON a.CustomerID = c.CustomerID GROUP BY a.CustomerID, b.FirstName, b.LastName
+ORDER BY TotalOrders DESC
+
+------------2nd Question------------
+Select * from Production.ProductCategory
+Select * from Production.ProductSubcategory
+Select * from Sales.SalesOrderHeader
+
+SELECT TOP 5 a.CustomerID,SUM(b.TotalDue) AS Total
+FROM Sales.Customer AS a
+JOIN Sales.SalesOrderHeader AS b ON a.CustomerID = b.CustomerID
+GROUP BY a.CustomerID ORDER BY Total DESC
+
+SELECT a.ProductID, a.Name,
+AVG(b.OrderQty) AS Average FROM 
+Production.Product a
+JOIN Sales.SalesOrderDetail b ON a.ProductID = b.ProductID
+GROUP BY a.ProductID, a.Name
+ORDER BY Average DESC;
+
+SELECT pc.Name AS ProductCategory,SUM(soh.TotalDue) AS TotalSales
+FROM 
+    Sales.SalesOrderHeader soh
+JOIN 
+    Sales.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID
+JOIN 
+    Production.Product p ON sod.ProductID = p.ProductID
+JOIN 
+    Production.ProductSubcategory psc ON p.ProductSubcategoryID = psc.ProductSubcategoryID
+JOIN 
+    Production.ProductCategory pc ON psc.ProductCategoryID = pc.ProductCategoryID
+GROUP BY 
+    pc.Name
+ORDER BY 
+    TotalSales DESC;
+
+
+------3rd Question---------------
+Select * from Production.Product
+Select * from Production.ProductSubcategory
+
+Update a Set a.ListPrice = a.ListPrice * 1.1
+FROM Production.Product a
+Join Production.ProductSubcategory b On a.ProductSubcategoryID = b.ProductSubcategoryID
+Join Production.ProductCategory c On b.ProductCategoryID = c.ProductCategoryID
+Where c.Name = 'Bikes';
+
+Delete From Production.Product Where ProductID Not In (
+Select ProductID
+From Sales.SalesOrderDetail
+);
+
+
+------4th Question--------------
+CREATE INDEX IX_SOD_ProductID
+ON Sales.SalesOrderDetail (ProductID);
+
+SELECT *FROM Sales.SalesOrderHeader WHERE OrderDate BETWEEN   '2014-06-01 00:00:00.000' AND  '2014-06-30 00:00:00.000'
+
+
+-----------5th Question----------
+
+Create View SPTotalSales As
+Select sp.BusinessEntityID As SalesPersonID,
+    person.FirstName  As SalesPersonName,
+    Sum(soh.TotalDue) As TotalSalesAmount
+From Sales.SalesPerson As sp
+Join Sales.SalesOrderHeader As soh On sp.BusinessEntityID = soh.SalesPersonID
+Join Person.Person As person On sp.BusinessEntityID = person.BusinessEntityID
+Group By sp.BusinessEntityID, person.FirstName, person.LastName;
+
+Select * from SPTotalSales
+
+Select Top 3 *From SPTotalSales Order By TotalSalesAmount Desc 
+
+-------------7th Question-----
+
+Create Procedure GenerateSalReport
+    @StartDate Date,
+    @EndDate Date
+AS
+Begin
+    Select a.OrderDate, b.Name As ProductName, c.OrderQty, c.LineTotal
+    From Sales.SalesOrderHeader As a
+    Join Sales.SalesOrderDetail As c ON a.SalesOrderID = c.SalesOrderID
+    Join Production.Product As b On c.ProductID = b.ProductID
+    Where a.OrderDate Between @StartDate AND @EndDate;
+END;
+
+DECLARE @start_date DATE = '2011-07-01';
+DECLARE @end_date DATE = '2012-07-31';
+
+Exec GenerateSalReport @StartDate = @start_date, @EndDate = @end_date;
+
+Create trigger Update_stock
+On Sales.SalesOrderDetail
+After Insert
+As
+Begin
+	Update Production.ProductInventory Set Quantity = Quantity + i.OrderQty
+	From inserted i  where Production.ProductInventory.ProductID = i.ProductID
+end;
+
+-------8th Question------
+----Extract-----
+Select PhoneNumberTypeID,PhoneNumber From Person.PersonPhone Order By PhoneNumberTypeID Desc;
+
+-------transform------
+Select PhoneNumberTypeID,Concat('+1 (', Substring(PhoneNumber, 1, 3), ') ', Substring(PhoneNumber, 4, 3), '-', Substring(PhoneNumber, 7, 4)) As FormattedPhoneNumber
+From
+   Person.PersonPhone
+Order By 
+    PhoneNumberTypeID Desc;
+
+--load
+-- Create 
+Create Table TransformedPersonPhone (
+    PhoneNumberTypeID Int,
+    FormattedPhoneNumber VARCHAR(20)
+);
+
+-- Insert 
+Insert Into TransformedPersonPhone (PhoneNumberTypeID, FormattedPhoneNumber)
+Select 
+    PhoneNumberTypeID,
+    Concat('+1 (', Substring(PhoneNumber, 1, 3), ') ', Substring(PhoneNumber, 4, 3), '-', Substring(PhoneNumber, 7, 4))
+From
+    Person.PersonPhone;
+
+	Select * from TransformedPersonPhone
+
+
+CREATE DATABASE Details;
+
+Create Table Customers1 (
+    CustomerID INT PRIMARY KEY,
+    FirstName VARCHAR(50),
+    LastName VARCHAR(50),
+    Email VARCHAR(100),
+    Phone VARCHAR(20),
+    Address VARCHAR(100),
+    City VARCHAR(50),
+    State VARCHAR(50),
+    ZipCode VARCHAR(20)
+);
+
+Create Table Products (
+    ProductID INT PRIMARY KEY,
+    ProductName VARCHAR(100),
+    Description VARCHAR(255),
+    Category VARCHAR(50),
+    Price DECIMAL(10, 2),
+    
+    Supplier VARCHAR(100),
+    Weight DECIMAL(8, 2),
+    Dimensions VARCHAR(50)
+);
+
+Create Table Sales (
+    SaleID INT PRIMARY KEY,
+    CustomerID INT,
+    ProductID INT,
+    SaleDate DATE,
+    Quantity INT,
+    TotalAmount DECIMAL(10, 2),
+    PaymentMethod VARCHAR(50),
+    ShippingAddress VARCHAR(100),
+    FOREIGN KEY (CustomerID) REFERENCES Customers1(CustomerID),
+    FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+
+
+-------9th Question-----
+Select 
+    Month(ModifiedDate) AS Month,
+    Count(*) AS TotalOrders,
+    Sum(TotalDue) AS TotalSales
+FROM 
+    Sales.SalesOrderHeader
+WHERE 
+    Year(ModifiedDate) = 2011
+GROUP BY 
+    Month(ModifiedDate)
+ORDER BY 
+    Month(ModifiedDate);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
