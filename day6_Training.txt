@@ -1,0 +1,171 @@
+-----------Introductio To SQL-----------
+Select Top 10 * from Person.Person
+
+Select * from Production.Product where Color = 'red'
+
+-----Advanced SQL Queries----------
+
+Select * from Production.Product
+
+Select p.ProductID,Avg(ListPrice) As Average from Production.Product p group by P.ProductID
+
+Select * from HumanResources.EmployeeDepartmentHistory
+
+Select e.DepartmentID,count(e.DepartmentID) As countOfDept from HumanResources.EmployeeDepartmentHistory e group by e.DepartmentID
+
+--------------SQL for Data Engineering-------
+
+
+Select a.SalesOrderID,b.ProductID from Sales.SalesOrderHeader a Inner Join Sales.SalesOrderDetail b On a.SalesOrderID = b.SalesOrderID 
+Select b.FirstName,b.LastName,c.EmailAddress from Sales.Customer a Inner Join Person.Person b On a.PersonID = b.BusinessEntityID Inner Join Person.EmailAddress c On b.BusinessEntityID = c.BusinessEntityID----Writing Queries for Data Manipulation and Analysis----
+
+
+Select a.PhoneNumber from Person.PersonPhone a where a.BusinessEntityID =5
+Update Person.PersonPhone  Set PhoneNumber = '111-222-3333' where BusinessEntityID = 5
+
+Select * from Sales.ShoppingCartItemDelete from Sales.ShoppingCartItem where Quantity = 3;----SQL Optimization Techniques------------
+
+Select DueDate,ShipDate from Sales.SalesOrderHeader where OrderDate = '2022-01-01'Select Name,ListPrice From Production.Product where ListPrice>1000-----------Working with Indexes and Views------
+
+Create Index Ind_Sales On Sales.SalesOrderHeader(SalesOrderNumber)
+
+Select SalesOrderID,SalesOrderNumber,OrderDate From Sales.SalesOrderHeader With(Index(Ind_Sales)) where SalesOrderNumber = '5043665'
+
+Drop Index Ind_Sales On Sales.SalesOrderHeader------Creating and Using Indexes and Views-----
+
+Create View vi_Product As Select ProductID,Name,ProductNumber From Production.Product
+Select * from vi_Product
+
+2. Create a view that joins the Sales.SalesOrderHeader and Sales.SalesOrderDetail tables and
+includes columns for SalesOrderID, OrderDate, and TotalDue.Create View vi_SalesAs Select a.SalesOrderID,a.OrderDate,a.TotalDue from Sales.SalesOrderHeader a Join Sales.SalesOrderDetail b On a.SalesOrderID = b.SalesOrderIDSelect * from vi_Sales------Transactions and Concurrency Control------
+
+Begin Transaction;
+Declare @cash money =500;
+Update Person.Account Set amount = amount+@cash Where Person_name='A'
+Update Person.Account Set amount = amount-@cash Where Person_name='B'
+Commit Transaction;
+
+
+
+BEGIN TRANSACTION;
+INSERT INTO Sales.SpecialOffer (Description, DiscountPct,Type,Category, 
+StartDate, EndDate,MinQty,MaxQty,rowguid,ModifiedDate)
+VALUES ( 'New Offer', 10, 'Volume Discount','Customer',GETDATE(), DATEADD(DAY, 30, GETDATE()),15,24,'1290C4F5-191F-4337-AB6B-0A2DDE03CBF9',	'2011-04-01 00:00:00.000');
+UPDATE Production.Product
+SET ModifiedDate = GETDATE()
+WHERE ProductID = '007';
+COMMIT TRANSACTION;
+
+--------Stored Procedures-------select * from Production.Product
+Create Procedure InsProduct
+    @Name NVARCHAR(255),
+    @ProductNumber NVARCHAR(25),
+    @ListPrice MONEY,
+    @Color NVARCHAR(15),
+    @Size NVARCHAR(10),
+    @Weight DECIMAL(8, 2),
+    @ProductCategoryID INT,
+    @ProductModelID INT
+AS
+BEGIN
+  
+insert into Production.Product (Name, ProductNumber, ListPrice, Color, Size, Weight, ProductSubcategoryID, ProductModelID)
+    values (@Name, @ProductNumber, @ListPrice, @Color, @Size, @Weight, @ProductCategoryID, @ProductModelID);
+end
+
+
+Create a stored procedure to update the StandardCost of a product in the Production.Product
+table based on the ProductID and a new cost parameter.
+
+Create Procedure UpdProduct
+@PID INT,
+@NewCost Money
+As
+Begin
+Update Production.Product Set StandardCost = @NewCost where ProductID = @PID
+end
+
+exec UpdProduct @PID = 1,@NewCost = 100
+
+
+----Writing Triggers--
+1. Write a trigger that updates the ModifiedDate column in the Production.Product table
+whenever a record is updated.
+
+Create Trigger trg_Product On Production.Product
+After Update
+As
+Begin
+	Update Production.Product Set ModifiedDate = GetDate();
+End
+
+Select * from Production.Product
+Update Production.Product Set StandardCost = 200 where ProductID = 1
+
+
+2. Write a trigger to log changes to the ListPrice in the Production.Product table into a new table
+called ProductPriceHistory.
+
+create table #tempV(
+	productID int,
+	listPrice money
+)
+
+Create Trigger Up_no
+On Production.Product
+After update
+As
+Begin
+	Insert into #tempV(productID,listPrice)
+	select d.ProductID,d.ListPrice from deleted d
+End
+
+Select * from #tempV
+
+Update Production.Product Set StandardCost = 200 where Name = 'Adjustable Race'
+
+-------ETL----
+
+Select * from Sales.SalesOrderHeader
+Create Table newSales(
+Year Int,
+TotalSales Decimal(12,2)
+)
+
+Insert into newSales(Year,TotalSales) 
+Select Year(OrderDate) As year,Sum(TotalDue) As TotalSales from Sales.SalesOrderHeader group by Year(OrderDate)
+Select * from newSales
+
+
+
+create table CustomerSpend1 (
+    CustomerID int primary key,
+   
+    TotalSpend money
+);
+
+insert into CustomerSpend1 (CustomerID, TotalSpend)
+select 
+    c.CustomerID,
+    sum(soh.TotalDue) as TotalSpend
+from 
+    Sales.Customer c
+inner join 
+    Sales.SalesOrderHeader soh on c.CustomerID = soh.CustomerID
+group by 
+    c.CustomerID
+	select * from CustomerSpend1
+
+-----PowerBI-----
+Select TerritoryID,Sum(TotalDue) As Total from Sales.SalesOrderHeader group by TerritoryID
+
+Select Top 5 * from Sales.SalesOrderDetail
+
+SELECT TOP 5
+    p.ProductID,
+    p.Name AS ProductName,
+    SUM(sod.LineTotal) AS TotalSalesAmount
+FROM Sales.SalesOrderDetail sod
+JOIN Production.Product p ON sod.ProductID = p.ProductID
+GROUP BY p.ProductID, p.Name
+ORDER BY TotalSalesAmount DESC
