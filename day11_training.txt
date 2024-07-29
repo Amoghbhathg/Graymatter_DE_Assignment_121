@@ -1,0 +1,77 @@
+employees = {}
+
+def add_employee(employee_id, name, salary):
+    
+    employees[employee_id] = {
+        'name': name,
+        'salary' : salary
+    }
+    print(f"Employee '{name}' added successfully.")
+
+def retrieve_employee_info(employee_id):
+    if employee_id in employees:
+        employee = employees[employee_id]
+        print(f"Employee ID: {employee_id}")
+        print(f"Name: {employee['name']}")
+        print(f"Salary: {employee['salary']}")
+    else:
+        print(f"Employee ID {employee_id} not found.")
+
+
+add_employee('001', 'Amogh',4000)
+add_employee('002', 'Devi', 40000)
+
+retrieve_employee_info('001')
+retrieve_employee_info('002')
+
+
+retrieve_employee_info('003')  
+
+
+class EmployeeManager:
+    def __init__(self):
+        # Initialize an empty dictionary to store employee information
+        self.employees = {}
+
+    def add_employee(self, employee_id, name, salary):
+        """Add a new employee to the dictionary."""
+        if employee_id in self.employees:
+            print(f"Employee ID {employee_id} already exists.")
+            return
+        
+        self.employees[employee_id] = {
+            'name': name,
+            'salary': salary
+        }
+        print(f"Employee '{name}' added successfully.")
+
+    def retrieve_employee_info(self, employee_id):
+        """Retrieve and print the details of an employee given their ID."""
+        if employee_id in self.employees:
+            employee = self.employees[employee_id]
+            print(f"Employee ID: {employee_id}")
+            print(f"Name: {employee['name']}")
+            print(f"Salary: {employee['salary']}")
+        else:
+            print(f"Employee ID {employee_id} not found.")
+
+# Example usage
+manager = EmployeeManager()
+
+# Adding employees
+manager.add_employee('001', 'Amogh', 4000)
+manager.add_employee('002', 'Devi', 40000)
+
+# Retrieving employee information
+manager.retrieve_employee_info('001')
+manager.retrieve_employee_info('002')
+
+# Attempting to retrieve information for a non-existent employee
+manager.retrieve_employee_info('003')
+
+
+
+QCSF14MDP77SIPJJRS
+
+
+Learnt Cloud basic concepts and worked on basic azure concepts on creating Storage and virtual machines
