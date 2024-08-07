@@ -1,0 +1,205 @@
+# Databricks notebook source
+from pyspark.sql.functions import sum
+from pyspark.sql.types import StructType, StringType, IntegerType
+
+
+# COMMAND ----------
+
+# MAGIC %run /Workspace/Users/amoghahg10@gmail.com/ADB/UtilityFolder/GM_utility
+
+# COMMAND ----------
+
+dbutils.help()
+
+# COMMAND ----------
+
+dbutils.fs.mount(source = "wasbs://adbinput@adlseastus1713.blob.core.windows.net"
+                 ,mount_point ="/mnt/adbinput"
+                 ,extra_configs = {"fs.azure.account.key.adlseastus1713.blob.core.windows.net":dbutils.secrets.get(scope = "Mount_Scope", key = "kvsecert1713")})
+
+# COMMAND ----------
+
+dbutils.fs.ls
+
+# COMMAND ----------
+
+df_002=spark.read.option("header",True).option("inferSchema",True).format("csv").load("/mnt/adbinput/employee.csv")
+
+# COMMAND ----------
+
+df_002.display()
+
+# COMMAND ----------
+
+df_002.write.parquet("/mnt/adbinput/parquet/")
+
+# COMMAND ----------
+
+grouped_data = df_002.groupBy("Department").agg(sum("Salary").alias("dep_total"))
+
+# COMMAND ----------
+
+grouped_data.display()
+
+# COMMAND ----------
+
+df_002.write.format("delta").saveAsTable("store_trans")
+
+# COMMAND ----------
+
+df_002.write.format("delta").save("/mnt/adbinput/table_2/")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC create table exe_tabel_01
+# MAGIC using delta
+# MAGIC options (path"abfss://adbinput@adlseastus1713.dfs.core.windows.net/table_1")
+
+# COMMAND ----------
+
+dbutils.widgets.text("param","department")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC Select * from store_trans
+
+# COMMAND ----------
+
+dbutils.widgets.text("param1","department")
+
+# COMMAND ----------
+
+department_value = dbutils.widgets.get("param1")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select *from store_trans where Department="$param1"
+
+# COMMAND ----------
+
+selected_department = dbutils.widgets.get("param1")
+filtered_df = df_002.filter(df_002["Department"] == selected_department)
+
+# COMMAND ----------
+
+filtered_df.display()
+
+# COMMAND ----------
+
+dbutils.widgets.dropdown("param2_dropdown","Engineering",["Engineering","Marketing","Sales"])
+
+# COMMAND ----------
+
+selected_department2 = dbutils.widgets.get("param2_dropdown")
+filtered_df2 = df_002.filter(df_002["Department"] == selected_department2)
+
+# COMMAND ----------
+
+filtered_df2.display()
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select *from store_trans where Department="$param2_dropdown"
+
+# COMMAND ----------
+
+df_002.display()
+
+# COMMAND ----------
+
+def add(a):
+    a+=25000
+    return a
+
+
+# COMMAND ----------
+
+add_function = udf(add,IntegerType())
+
+# COMMAND ----------
+
+df_003 = df_002.withColumn("updatedSalary",add_function("Salary"))
+
+# COMMAND ----------
+
+df_003 = df_002.withColumn("MulSalary",mul_sum("Salary"))
+
+# COMMAND ----------
+
+df_003 = df_002.withColumn("SubSalary",div_sum("Salary"))
+
+# COMMAND ----------
+
+df_003.display()
+
+# COMMAND ----------
+
+spark.udf.register("add_fun_sql",add,IntegerType())
+
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC select add_fun_sql(Salary) from store_trans
+# MAGIC
+
+# COMMAND ----------
+
+dbutils.notebook.run("/Workspace/Users/amoghahg10@gmail.com/ADB/UtilityFolder/GM_utility",300)
+
+
+
+####Creating One More Notebook and run in Another Notebook
+
+from pyspark.sql.functions import sum
+from pyspark.sql.types import StructType, StringType, IntegerType
+
+def add(a):
+    a+=10000
+    return a
+
+def mulSal(a):
+    a*=2
+    return a
+
+def subSal(a):
+    a=a-2000
+    return a
+
+add_sum = udf(add,IntegerType())
+mul_sum = udf(mulSal,IntegerType())
+div_sum = udf(subSal,IntegerType())
+
+Use "#run workPath" to execute Another Notebook
+
+
+
+######SQLAnd Pratition####
+
+jdbc_url = "jdbc:sqlserver://gmdeserver.database.windows.net:1433;database=gmdedb"
+jdbc_properties = {
+    "user":"sqladmin",
+    "password":"Rajaratna@123",
+    "driver":"com.microsoft.sqlserver.jdbc.SQLServerDriver"
+}
+
+table_name = "saleslt.Customer"
+df = spark.read.jdbc(url=jdbc_url, table = table_name,properties=jdbc_properties)
+
+df.display()
+
+df.rdd.getNumPartitions()
+
+spark.conf.get("spark.sql.files.maxPartitionBytes")
+
+df = df.repartition(10)
+
+df = df.coalesce(1)
+
+df.cache().count()
+
+
